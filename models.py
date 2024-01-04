@@ -3,6 +3,7 @@ from pymongo.server_api import ServerApi
 from mongoengine import *
 import configparser
 import pathlib
+import json
 import sys
 
 file_config = pathlib.Path(__file__).parent.joinpath("config.ini")
@@ -12,26 +13,46 @@ config.read(file_config)
 username = config.get("DB", "user")
 password = config.get("DB", "password")
 db_name = config.get("DB", "db_name")
+db = config.get("DB", "db")
 domain = config.get("DB", "domain")
+authors = config.get("json", "authors")
+qoutes = config.get("DB", "qoutes")
 
 
 uri = f"mongodb+srv://{username}:{password}@{db_name}.{domain}/?retryWrites=true&w=majority"
 
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
+client = MongoClient(uri, server_api=ServerApi("1"))
 try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
+    client.admin.command("ping")
+    # print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(e)
+    sys.exit(1)
+
+connect(db=db, host=uri)
+
+try:
+    with open(authors, "r") as fh:
+        authors_data = json.load(fh)
+except Exception as e:
+    print(e)
+    sys.exit(1)
 
 
-connect(db="web17",host=uri)
+class Author(Document):
+    fullname = StringField(max_length=150)
+    born_date = StringField(max_length=50)
+    born_location = StringField(max_length=150)
+    description = StringField()
 
-print ("_"*60)
+
+class Qoute(Document):
+    tags = []
+    author = ReferenceField(Author)
+    quote = StringField()
 
 
-
+"""
 class User(Document):
     email = StringField(required=True)
     first_name = StringField(max_length=50)
@@ -74,3 +95,4 @@ if __name__ == "__main__":
     post2.link_url = "http://docs.mongoengine.com/"
     post2.tags = ["mongoengine"]
     post2.save()
+"""

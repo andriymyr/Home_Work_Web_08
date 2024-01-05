@@ -16,7 +16,7 @@ db_name = config.get("DB", "db_name")
 db = config.get("DB", "db")
 domain = config.get("DB", "domain")
 authors = config.get("json", "authors")
-qoutes = config.get("DB", "qoutes")
+qoutes = config.get("json", "qoutes")
 
 
 uri = f"mongodb+srv://{username}:{password}@{db_name}.{domain}/?retryWrites=true&w=majority"
@@ -24,7 +24,6 @@ uri = f"mongodb+srv://{username}:{password}@{db_name}.{domain}/?retryWrites=true
 client = MongoClient(uri, server_api=ServerApi("1"))
 try:
     client.admin.command("ping")
-    # print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(e)
     sys.exit(1)
@@ -38,6 +37,12 @@ except Exception as e:
     print(e)
     sys.exit(1)
 
+try:
+    with open(qoutes, "r") as fh:
+        qoutes_data = json.load(fh)
+except Exception as e:
+    print(e)
+    sys.exit(1)
 
 class Author(Document):
     fullname = StringField(max_length=150)
@@ -47,7 +52,7 @@ class Author(Document):
 
 
 class Qoute(Document):
-    tags = []
+    tags = ListField(StringField())
     author = ReferenceField(Author)
     quote = StringField()
 

@@ -1,89 +1,80 @@
-import argparse
+import json
+import sys
 
-from bson.objectid import ObjectId
-from mongoengine import (
-    connect,
-    Document,
-    StringField,
-    IntField,
-    ListField,
-    DoesNotExist,
-)
-
-connect(
-    db="web16",
-    host="mongodb+srv://userweb16:****@krabaton.5mlpr.gcp.mongodb.net/?retryWrites=true&w=majority",
-)
-
-parser = argparse.ArgumentParser(description="Server Cats Enterprise")
-parser.add_argument("--action", help="create, update, read, delete")  # CRUD action
-parser.add_argument("--id")
-parser.add_argument("--name")
-parser.add_argument("--age")
-parser.add_argument("--features", nargs="+")
-
-arg = vars(parser.parse_args())
-
-action = arg.get("action")
-pk = arg.get("id")
-name = arg.get("name")
-age = arg.get("age")
-features = arg.get("features")
+from models import Author, Qoute, connect, authors, qoutes
+from mongoengine.queryset.visitor import Q
 
 
-class Cat(Document):
-    name = StringField(max_length=120, required=True)
-    age = IntField(min_value=1, max_value=30)
-    features = ListField(StringField(max_length=150))
-    meta = {"collection": "cats"}
-
-
-def find():
-    return Cat.objects.all()
-
-
-def create(name, age, features):
-    r = Cat(name=name, age=age, features=features)
-    r.save()
-    return r
-
-
-def update(pk, name, age, features):
-    cat = Cat.objects(id=pk).first()  # None або кота
-    if cat:
-        cat.update(name=name, age=age, features=features)
-        cat.reload()
-    return cat
-
-
-def delete(pk):
+def read_json():
+    e = ""
     try:
-        cat = Cat.objects.get(id=pk)  # якщо кота немає то помилка DoesNotExist
-        cat.delete()
-        return cat
-    except DoesNotExist:
-        return None
+        with open(authors, "r", encoding="utf-8") as fh:
+            authors_data = json.load(fh)
+        with open(qoutes, "r", encoding="utf-8") as fh:
+            qoutes_data = json.load(fh)
+    except Exception as e:
+        print(e)
+        # sys.exit(1)
+    return authors_data, qoutes_data, e
 
 
-def main():
-    match action:
-        case "create":
-            r = create(name, age, features)
-            print(r.to_mongo().to_dict())
-        case "read":
-            r = find()
-            print([e.to_mongo().to_dict() for e in r])
-        case "update":
-            r = update(pk, name, age, features)
-            if r:
-                print(r.to_mongo().to_dict())
-        case "delete":
-            r = delete(pk)
-            if r:
-                print(r.to_mongo().to_dict())
-        case _:
-            print("Unknown command")
+def update_mongo(authors_data, qoutes_data):
+    for data in authors_data:
+        mongo_author = Author(fullname=data["fullname"])
+        mongo_author.born_date = data["born_date"]
+        mongo_author.born_location = data["born_location"]
+        mongo_author.description = data["description"]
+        mongo_author.save()
+
+    for data in qoutes_data:
+        mongo_qoute = Qoute(tags=data["tags"])
+        mongo_qoute.author = Author.objects(fullname=data["author"]).first()
+        mongo_qoute.quote = data["quote"]
+        mongo_qoute.save()
 
 
-if __name__ == "__main__":
-    main()
+def find_data(fild, args):
+    if not fild:
+        print("no find")
+    for search_data in args:
+        if fild == "fullname":
+            author = Author.objects(fullname=search_data).first().id
+            if author:
+                res = Qoute.objects(author=author)
+                print(f"search <{search_data}> in field <{fild}> :\n")
+                for qout in res:
+                    print(qout.quote)
+        elif fild == "tags":
+            for tag_ in Qoute.objects(tags=search_data):
+                print(
+                    f"search {search_data} in field {fild} :\n Author {tag_.author.fullname} - {tag_.quote}"
+                )
+
+
+def finds_data(fild, args):
+    if not fild:
+        print("no find")
+    for search_data in args:
+        if fild == "fullname":
+            print(f"search <{search_data}> in field <{fild}> :\n")
+            authors = Author.objects(fullname__icontains=search_data)  # .first().id
+            for author in authors:
+                res = Qoute.objects(author__icontains=author.id)
+                for qout in res:
+                    print(qout.author.fullname, "--", qout.quote)
+        elif fild == "description":
+            res = Author.objects(description__icontains=search_data)
+            print(f"search <{search_data}> in field <{fild}> :\n")
+            for desc in res:
+                print(
+                    desc.fullname,
+                    "_",
+                    desc.born_date,
+                    "_",
+                    desc.born_location,
+                    desc.description,
+                )
+        elif fild == "tags":
+            print(f"search {search_data} in field {fild} :")
+            for tag_ in Qoute.objects(tags__icontains=search_data):
+                print(f"Author {tag_.author.fullname} - {tag_.quote}")

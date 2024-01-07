@@ -17,6 +17,7 @@ db = config.get("DB", "db")
 domain = config.get("DB", "domain")
 authors = config.get("json", "authors")
 qoutes = config.get("json", "qoutes")
+count_user = config.get("messege", "count_user")
 
 
 uri = f"mongodb+srv://{username}:{password}@{db_name}.{domain}/?retryWrites=true&w=majority"
@@ -46,8 +47,10 @@ class Qoute(Document):
 
 class User(Document):
     email = StringField(required=True)
-    first_name = StringField(max_length=50)
-    last_name = StringField(max_length=50)
+    fullname = StringField(max_length=150)
+    phone = StringField(max_length=30)
+    channel = StringField(max_length=5)
+    flag = BooleanField(default=False)
 
 
 class Post(Document):
@@ -55,15 +58,3 @@ class Post(Document):
     author = ReferenceField(User, reverse_delete_rule=CASCADE)
     tags = ListField(StringField(max_length=30))
     meta = {"allow_inheritance": True}
-
-
-class TextPost(Post):
-    content = StringField()
-
-
-class ImagePost(Post):
-    image_path = StringField()
-
-
-class LinkPost(Post):
-    link_url = StringField()

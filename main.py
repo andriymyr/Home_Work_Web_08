@@ -1,6 +1,8 @@
 import argparse
 import repository
 
+# import producer
+
 from bson.objectid import ObjectId
 from mongoengine import (
     connect,
@@ -12,7 +14,10 @@ from mongoengine import (
 )
 
 parser = argparse.ArgumentParser(description="Server Cats Enterprise")
-parser.add_argument("--action", help="update, read, find, finds")
+parser.add_argument(
+    "--action",
+    help="update, read, find, finds, create_messege, post_messege, send_messege",
+)
 parser.add_argument("--name")
 parser.add_argument("--tag")
 
@@ -61,6 +66,12 @@ def main():
                 repository.finds_data(fild, args)
                 if fild.lower() == "exit":
                     find_ = False
+        case "create_messege":
+            repository.create_messege()
+        case "post_messege":
+            repository.post_messege()
+        case "send_messege":
+            repository.send_messege()
         case _:
             print("Unknown command")
 
@@ -105,4 +116,10 @@ if __name__ == "__main__":
         “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”
         “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.”
         “Try not to become a man of success. Rather become a man of value.”    
+5. Створення користувачів та повідомдень
+    py main.py --action create_messege
+6. Розміщення повідомлень в черзі
+    py main.py --action post_messege 
+7. Отримання повідомлень з черги та їх обробка
+    py main.py --action send_messege
 """

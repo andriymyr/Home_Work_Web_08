@@ -1,8 +1,22 @@
 import json
 import sys
+import signal
+import faker
+import random
+import producer
+import consumer
 
-from models import Author, Qoute, connect, authors, qoutes
+import threading
+
+from models import Author, Qoute, User, Post, connect, authors, qoutes, count_user
 from mongoengine.queryset.visitor import Q
+
+exit_event = threading.Event()
+
+
+def signal_handler(signum, frame):
+    print("Received CTRL+C, stopping the worker...")
+    exit_event.set()
 
 
 def read_json():
@@ -78,3 +92,33 @@ def finds_data(fild, args):
             print(f"search {search_data} in field {fild} :")
             for tag_ in Qoute.objects(tags__icontains=search_data):
                 print(f"Author {tag_.author.fullname} - {tag_.quote}")
+
+
+def create_messege():
+    fake = faker.Faker()
+    count = 0
+    while count < float(count_user):
+        count += 1
+        user_ = User(fullname=fake.name())
+        user_.email = fake.email()
+        user_.phone = fake.phone_number()
+        user_.channel = random.choice(["email", "phone"])
+
+        user_.save()
+        post_ = Post(author=user_.id)
+        post_.title = fake.text(max_nb_chars=100)
+        post_.save()
+        # post_.tags
+        # post_.meta
+
+
+def post_messege():
+    producer.producer()
+
+
+def send_messege():
+    my_thread = threading.Thread(target=consumer.consumer)
+
+    my_thread.start()
+    signal.signal(signal.SIGINT, signal_handler)
+    my_thread.join()
